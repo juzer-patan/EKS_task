@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-owncloud
+  labels:
+    app: ownc
+spec:
+  selector:
+    dc: IN
+    app : ownc
+  type : LoadBalancer
+  ports:
+    - port: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name : owncweb1
+spec :
+  replicas : 1
+  selector :
+    matchLabels:
+      dc: IN
+      app : ownc
+  template :
+    metadata:
+      name: owncpod
+      labels:
+        dc: IN
+        app : ownc 
+    spec:
+      containers:
+      - name: ownc1
+        image: owncloud:9.1
+        ports:
+        - containerPort: 80
+          name: ownc1
+        volumeMounts:
+        - name : owncloud-data-storage
+          mountPath: /var/www/html/data
+        - name : owncloud-app-storage
+          mountPath: /var/www/html/apps
+        - name : owncloud-config-storage
+          mountPath: /var/www/html/config
+        env:
+        - name: OWNCLOUD_DB_HOST
+          value: owncloud-mysql
+        - name: OWNCLOUD_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysqlsecret
+              key: rpass
+      volumes:
+      - name: owncloud-data-storage
+        persistentVolumeClaim :
+          claimName: owncloud-data-claim
+      - name: owncloud-app-storage
+        persistentVolumeClaim :
+          claimName: owncloud-app-claim
+      - name: owncloud-config-storage
+        persistentVolumeClaim :
+          claimName: owncloud-config-claim
